@@ -182,6 +182,8 @@ vim.keymap.set('n', '<Esc>', '<cmd>nohlsearch<CR>')
 -- Diagnostic keymaps
 vim.keymap.set('n', '<leader>q', vim.diagnostic.setloclist, { desc = 'Open diagnostic [Q]uickfix list' })
 
+-- Open and close navigation menu
+vim.keymap.set('n', '<leader>e', ':Ex<CR>', { desc = 'Toggle Navigation' })
 -- Exit terminal mode in the builtin terminal with a shortcut that is a bit easier
 -- for people to discover. Otherwise, you normally need to press <C-\><C-n>, which
 -- is not what someone will guess without a bit more experience.
@@ -951,7 +953,7 @@ require('lazy').setup({
     main = 'nvim-treesitter.configs', -- Sets main module to use for opts
     -- [[ Configure Treesitter ]] See `:help nvim-treesitter`
     opts = {
-      ensure_installed = { 'bash', 'c', 'diff', 'html', 'lua', 'luadoc', 'markdown', 'markdown_inline', 'query', 'vim', 'vimdoc' },
+      ensure_installed = { 'bash', 'c', 'diff', 'html', 'lua', 'luadoc', 'markdown', 'markdown_inline', 'query', 'vim', 'vimdoc', 'java' },
       -- Autoinstall languages that are not installed
       auto_install = true,
       highlight = {
@@ -970,7 +972,56 @@ require('lazy').setup({
     --    - Show your current context: https://github.com/nvim-treesitter/nvim-treesitter-context
     --    - Treesitter + textobjects: https://github.com/nvim-treesitter/nvim-treesitter-textobjects
   },
+  {
+    'mfussenegger/nvim-jdtls',
+  },
+  -- Add these plugins to your kickstart config
+  {
+    'mfussenegger/nvim-dap',
+    dependencies = {
+      'rcarriga/nvim-dap-ui',
+      'theHamsta/nvim-dap-virtual-text',
+      'nvim-neotest/nvim-nio',
+    },
+    config = function()
+      local dap = require 'dap'
+      local dapui = require 'dapui'
 
+      dapui.setup()
+      require('nvim-dap-virtual-text').setup()
+
+      -- Auto open/close dap-ui
+      dap.listeners.after.event_initialized['dapui_config'] = function()
+        dapui.open()
+      end
+      dap.listeners.before.event_terminated['dapui_config'] = function()
+        dapui.close()
+      end
+      dap.listeners.before.event_exited['dapui_config'] = function()
+        dapui.close()
+      end
+
+      -- Debug keymaps
+      vim.keymap.set('n', '<F5>', dap.continue)
+      vim.keymap.set('n', '<F10>', dap.step_over)
+      vim.keymap.set('n', '<F11>', dap.step_into)
+      vim.keymap.set('n', '<F12>', dap.step_out)
+      vim.keymap.set('n', '<leader>db', dap.toggle_breakpoint)
+      vim.keymap.set('n', '<leader>dr', dap.repl.open)
+    end,
+  },
+
+  -- Mason DAP extension
+  {
+    'jayp0521/mason-nvim-dap.nvim',
+    dependencies = { 'williamboman/mason.nvim' },
+    config = function()
+      require('mason-nvim-dap').setup {
+        ensure_installed = { 'java-debug-adapter', 'java-test' },
+        automatic_installation = true,
+      }
+    end,
+  },
   -- The following comments only work if you have downloaded the kickstart repo, not just copy pasted the
   -- init.lua. If you want these files, they are in the repository, so you can just download them and
   -- place them in the correct locations.
