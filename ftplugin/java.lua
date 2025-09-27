@@ -1,107 +1,133 @@
--- Java Language Server configuration.
--- Locations:
--- 'nvim/ftplugin/java.lua'.
--- 'nvim/lang-servers/intellij-java-google-style.xml'
-local function debug_log(msg, val)
-  vim.notify(vim.inspect(val and val or msg), vim.log.levels.INFO)
-end
+-- ftplugin/java.lua - Java configuration for Kickstart v3
+-- Compatible with existing blink.cmp, mason, and nvim-jdtls setup
+
+local bufnr = vim.api.nvim_get_current_buf()
+
+-- Java-specific buffer settings
+vim.bo[bufnr].tabstop = 4
+vim.bo[bufnr].shiftwidth = 4
+vim.bo[bufnr].expandtab = true
+vim.bo[bufnr].softtabstop = 4
+
+-- Enable folding for Java
+vim.wo.foldmethod = 'expr'
+vim.wo.foldexpr = 'nvim_treesitter#foldexpr()'
+vim.wo.foldlevel = 99
+
+-- Only proceed with JDTLS setup if the plugin is available
 local jdtls_ok, jdtls = pcall(require, 'jdtls')
 if not jdtls_ok then
-  vim.notify 'JDTLS not found, install with `:Mason` and install jdtls'
+  -- Set up basic Java keymaps without JDTLS
+  local opts = { noremap = true, silent = true, buffer = bufnr }
+
+  -- Build and run commands
+  vim.keymap.set('n', '<leader>jb', function()
+    local has_mvnw = vim.fn.filereadable './mvnw' == 1
+    local has_gradlew = vim.fn.filereadable './gradlew' == 1
+
+    if has_mvnw then
+      vim.cmd '!./mvnw clean compile'
+    elseif has_gradlew then
+      vim.cmd '!./gradlew build'
+    else
+      vim.cmd '!mvn clean compile'
+    end
+  end, { desc = 'Build Java project' })
+
+  vim.keymap.set('n', '<leader>jr', function()
+    local has_mvnw = vim.fn.filereadable './mvnw' == 1
+    if has_mvnw then
+      vim.cmd '!./mvnw spring-boot:run'
+    else
+      vim.cmd '!mvn spring-boot:run'
+    end
+  end, { desc = 'Run Spring Boot app' })
+
   return
 end
 
--- Direct Mason path (we know this works from your earlier confirmation)
-local jdtls_install_path = vim.fn.stdpath 'data' .. '/mason/packages/jdtls'
+local jdtls_setup = require 'jdtls.setup'
 
--- Determine OS config directory
-local config_dir = 'config_linux'
-if vim.fn.has 'macunix' == 1 then
-  config_dir = 'config_mac'
-elseif vim.fn.has 'win32' == 1 then
-  config_dir = 'config_win'
+-- Function to get the project root
+local function get_root_dir()
+  return jdtls_setup.find_root { '.git', 'mvnw', 'gradlew', 'pom.xml', 'build.gradle' } or vim.fn.getcwd()
 end
 
--- Get Java path - use system Java instead of hardcoded macOS path
-local java_cmd = vim.fn.exepath 'java'
-if java_cmd == '' then
-  vim.notify('Java not found in PATH. Please install Java.', vim.log.levels.ERROR)
-  return
-end
-
--- Get JAVA_HOME - try to detect it automatically
-local java_home = os.getenv 'JAVA_HOME'
-if not java_home then
-  -- Try to find Java home automatically
-  local java_version_output = vim.fn.system(java_cmd .. ' -XshowSettings:properties -version 2>&1')
-  java_home = java_version_output:match 'java%.home = ([^\r\n]+)'
-  if not java_home then
-    java_home = vim.fn.system('dirname $(dirname $(readlink -f ' .. java_cmd .. '))')
-    java_home = string.gsub(java_home, '\n', '') -- Remove newline
+-- Get OS-specific config
+local function get_os_config()
+  if vim.fn.has 'mac' == 1 then
+    return 'mac'
+  elseif vim.fn.has 'unix' == 1 then
+    return 'linux'
+  else
+    return 'win'
   end
 end
--- Mason-based paths using direct path
-local path_to_lsp_server = jdtls_install_path .. '/' .. config_dir
-local path_to_plugins = jdtls_install_path .. '/plugins/'
-local path_to_jar = vim.fn.glob(path_to_plugins .. 'org.eclipse.equinox.launcher_*.jar')
-local lombok_path = jdtls_install_path .. '/lombok.jar'
-local root_markers = { '.git', 'mvnw', 'gradlew', 'pom.xml', 'build.gradle' }
-local root_dir = require('jdtls.setup').find_root(root_markers)
-if root_dir == '' then
+
+-- Check Mason installation
+local mason_path = vim.fn.stdpath 'data' .. '/mason'
+local jdtls_path = mason_path .. '/packages/jdtls'
+
+if vim.fn.isdirectory(jdtls_path) == 0 then
+  vim.notify('JDTLS not found. Run: :MasonInstall jdtls', vim.log.levels.WARN)
   return
 end
 
-local project_name = vim.fn.fnamemodify(vim.fn.getcwd(), ':p:h:t')
-local workspace_dir = vim.fn.stdpath 'data' .. '/site/java/workspace-root/' .. project_name
-os.execute('mkdir -p ' .. workspace_dir) -- Use -p flag for Linux
+local lombok_path = jdtls_path .. '/lombok.jar'
 
--- Detect Java version for runtime configuration
-local java_version = vim.fn.system(java_cmd .. ' -version 2>&1'):match 'version "(%d+)'
-java_version = tonumber(java_version) or 17 -- Default to 17 if detection fails
+-- Workspace directory
+local project_name = vim.fn.fnamemodify(get_root_dir(), ':t')
+local workspace_dir = vim.fn.stdpath 'data' .. '/jdtls-workspace/' .. project_name
 
--- Main Config
+-- Get blink.cmp capabilities (compatible with your setup)
+local blink_ok, blink = pcall(require, 'blink.cmp')
+local capabilities = blink_ok and blink.get_lsp_capabilities() or vim.lsp.protocol.make_client_capabilities()
+
+-- JDTLS configuration
 local config = {
-  -- The command that starts the language server - using detected Java path
   cmd = {
-    java_cmd, -- Use detected Java command instead of hardcoded macOS path
+    'java',
     '-Declipse.application=org.eclipse.jdt.ls.core.id1',
     '-Dosgi.bundles.defaultStartLevel=4',
     '-Declipse.product=org.eclipse.jdt.ls.core.product',
     '-Dlog.protocol=true',
     '-Dlog.level=ALL',
+    '-Xmx2g',
     '-javaagent:' .. lombok_path,
-    '-Xms1g',
     '--add-modules=ALL-SYSTEM',
     '--add-opens',
     'java.base/java.util=ALL-UNNAMED',
     '--add-opens',
     'java.base/java.lang=ALL-UNNAMED',
-
     '-jar',
-    path_to_jar,
+    vim.fn.glob(jdtls_path .. '/plugins/org.eclipse.equinox.launcher_*.jar'),
     '-configuration',
-    path_to_lsp_server,
+    jdtls_path .. '/config_' .. get_os_config(),
     '-data',
     workspace_dir,
   },
 
-  root_dir = root_dir,
+  root_dir = get_root_dir(),
 
-  -- Updated settings with detected Java home and version
   settings = {
     java = {
-      home = java_home, -- Use detected Java home instead of macOS path
       eclipse = {
         downloadSources = true,
       },
       configuration = {
         updateBuildConfiguration = 'interactive',
         runtimes = {
-          -- Dynamic runtime configuration based on detected Java
           {
-            name = 'JavaSE-' .. java_version,
-            path = java_home,
-            default = true,
+            name = 'JavaSE-11',
+            path = vim.fn.expand '~/.sdkman/candidates/java/11.0.20-tem/',
+          },
+          {
+            name = 'JavaSE-17',
+            path = vim.fn.expand '~/.sdkman/candidates/java/17.0.8-tem/',
+          },
+          {
+            name = 'JavaSE-21',
+            path = vim.fn.expand '~/.sdkman/candidates/java/21.0.1-tem/',
           },
         },
       },
@@ -119,22 +145,6 @@ local config = {
       },
       format = {
         enabled = true,
-        settings = {
-          url = vim.fn.stdpath 'config' .. '/lang-servers/intellij-java-google-style.xml',
-          profile = 'GoogleStyle',
-        },
-      },
-      compile = {
-        nullAnalysis = {
-          mode = 'automatic',
-        },
-      },
-      codeGeneration = {
-        toString = {
-          template = '${object.className}{${member.name()}=${member.value}, ${otherMembers}}',
-        },
-        useBlocks = true,
-        generateComments = false, -- Better for Lombok
       },
     },
     signatureHelp = { enabled = true },
@@ -147,9 +157,6 @@ local config = {
         'java.util.Objects.requireNonNull',
         'java.util.Objects.requireNonNullElse',
         'org.mockito.Mockito.*',
-        -- Spring Boot additions
-        'org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*',
-        'org.springframework.test.web.servlet.result.MockMvcResultMatchers.*',
       },
       importOrder = {
         'java',
@@ -158,11 +165,19 @@ local config = {
         'org',
       },
     },
+    contentProvider = { preferred = 'fernflower' },
+    extendedClientCapabilities = jdtls.extendedClientCapabilities,
     sources = {
       organizeImports = {
         starThreshold = 9999,
         staticStarThreshold = 9999,
       },
+    },
+    codeGeneration = {
+      toString = {
+        template = '${object.className}{${member.name()}=${member.value}, ${otherMembers}}',
+      },
+      useBlocks = true,
     },
   },
 
@@ -170,75 +185,172 @@ local config = {
     allow_incremental_sync = true,
   },
 
+  capabilities = capabilities,
+
   init_options = {
     bundles = {},
-    extendedClientCapabilities = {
-      progressReportProvider = false,
-      classFileContentsSupport = true,
-      overrideMethodsPromptSupport = true,
-      hashCodeEqualsPromptSupport = true,
-      advancedOrganizeImportsSupport = true,
-      advancedGenerateAccessorsSupport = true,
-      generateToStringPromptSupport = true,
-      advancedExtractRefactoringSupport = true,
-      inferSelectionSupport = { 'extractMethod', 'extractVariable', 'extractField' },
-    },
   },
+
+  on_attach = function(client, bufnr)
+    -- Enable completion triggered by <c-x><c-o>
+    vim.api.nvim_buf_set_option(bufnr, 'omnifunc', 'v:lua.vim.lsp.omnifunc')
+
+    local opts = { noremap = true, silent = true, buffer = bufnr }
+
+    -- Java-specific JDTLS keymaps (using your keymap style)
+    vim.keymap.set('n', '<leader>jo', jdtls.organize_imports, { desc = 'Java: [O]rganize imports', buffer = bufnr })
+    vim.keymap.set('n', '<leader>jv', jdtls.extract_variable, { desc = 'Java: Extract [V]ariable', buffer = bufnr })
+    vim.keymap.set('n', '<leader>jc', jdtls.extract_constant, { desc = 'Java: Extract [C]onstant', buffer = bufnr })
+    vim.keymap.set('v', '<leader>jm', [[<ESC><CMD>lua require('jdtls').extract_method(true)<CR>]], { desc = 'Java: Extract [M]ethod', buffer = bufnr })
+    vim.keymap.set('n', '<leader>jt', jdtls.test_class, { desc = 'Java: [T]est class', buffer = bufnr })
+    vim.keymap.set('n', '<leader>jn', jdtls.test_nearest_method, { desc = 'Java: Test [N]earest method', buffer = bufnr })
+    vim.keymap.set('n', '<leader>ju', jdtls.update_project_config, { desc = 'Java: Update [P]roject config', buffer = bufnr })
+
+    -- Build and run commands (Spring Boot compatible)
+    vim.keymap.set('n', '<leader>jb', function()
+      local has_mvnw = vim.fn.filereadable './mvnw' == 1
+      local has_gradlew = vim.fn.filereadable './gradlew' == 1
+
+      if has_mvnw then
+        vim.cmd '!./mvnw clean compile'
+      elseif has_gradlew then
+        vim.cmd '!./gradlew build'
+      else
+        vim.cmd '!mvn clean compile'
+      end
+    end, { desc = 'Java: [B]uild project', buffer = bufnr })
+
+    vim.keymap.set('n', '<leader>jr', function()
+      local has_mvnw = vim.fn.filereadable './mvnw' == 1
+      if has_mvnw then
+        vim.cmd '!./mvnw spring-boot:run'
+      else
+        vim.cmd '!mvn spring-boot:run'
+      end
+    end, { desc = 'Java: [R]un Spring Boot', buffer = bufnr })
+
+    vim.keymap.set('n', '<leader>jT', function()
+      local has_mvnw = vim.fn.filereadable './mvnw' == 1
+      if has_mvnw then
+        vim.cmd '!./mvnw test'
+      else
+        vim.cmd '!mvn test'
+      end
+    end, { desc = 'Java: Run all [T]ests', buffer = bufnr })
+
+    -- Spring Boot specific commands
+    vim.keymap.set('n', '<leader>sb', function()
+      local has_mvnw = vim.fn.filereadable './mvnw' == 1
+      if has_mvnw then
+        vim.cmd '!./mvnw spring-boot:build-image'
+      else
+        vim.cmd '!mvn spring-boot:build-image'
+      end
+    end, { desc = 'Spring Boot: [B]uild image', buffer = bufnr })
+
+    vim.keymap.set('n', '<leader>sd', function()
+      local has_mvnw = vim.fn.filereadable './mvnw' == 1
+      if has_mvnw then
+        vim.cmd '!./mvnw dependency:tree'
+      else
+        vim.cmd '!mvn dependency:tree'
+      end
+    end, { desc = 'Spring Boot: Show [D]ependencies', buffer = bufnr })
+
+    -- Auto-organize imports on save
+    vim.api.nvim_create_autocmd('BufWritePre', {
+      buffer = bufnr,
+      callback = function()
+        if client.server_capabilities.documentFormattingProvider then
+          jdtls.organize_imports()
+        end
+      end,
+    })
+  end,
 }
 
--- Add debugger and test bundles if available
-local bundles = {}
-local mason_path = vim.fn.stdpath 'data' .. '/mason/'
-
--- Add Java Debug Adapter
-local debug_adapter_path = mason_path .. 'packages/java-debug-adapter/extension/server/com.microsoft.java.debug.plugin-*.jar'
-vim.list_extend(bundles, vim.split(vim.fn.glob(debug_adapter_path), '\n'))
-
--- Add Java Test Runner
-local test_runner_path = mason_path .. 'packages/java-test/extension/server/*.jar'
-vim.list_extend(bundles, vim.split(vim.fn.glob(test_runner_path), '\n'))
-
--- Add Lombok to bundles for additional support
-if vim.fn.filereadable(lombok_path) == 1 then
-  table.insert(bundles, lombok_path)
+-- Update which-key mappings for Java (since you're using which-key)
+local which_key_ok, which_key = pcall(require, 'which-key')
+if which_key_ok then
+  which_key.add {
+    { '<leader>j', group = '[J]ava', buffer = bufnr },
+    { '<leader>s', group = '[S]pring Boot', buffer = bufnr },
+  }
 end
 
-config.init_options.bundles = bundles
+-- Start JDTLS
+jdtls.start_or_attach(config)
 
-config['on_attach'] = function(_, bufnr)
-  -- Setup DAP if available
-  local dap_ok, jdtls_dap = pcall(require, 'jdtls.dap')
-  if dap_ok then
-    jdtls_dap.setup_dap { hotcodereplace = 'auto', config_overrides = {} }
-  end
+-- Java-specific abbreviations for faster coding
+local abbrevs = {
+  ['syso'] = 'System.out.println();',
+  ['sysoe'] = 'System.err.println();',
+  ['psvm'] = 'public static void main(String[] args) {',
+  ['fori'] = 'for (int i = 0; i < ; i++) {',
+  ['fore'] = 'for ( : ) {',
+}
 
-  -- Java-specific keymaps
-  local opts = { noremap = true, silent = true, buffer = bufnr }
-
-  vim.keymap.set('n', '<leader>jo', jdtls.organize_imports, opts)
-  vim.keymap.set('n', '<leader>jv', jdtls.extract_variable, opts)
-  vim.keymap.set('n', '<leader>jc', jdtls.extract_constant, opts)
-  vim.keymap.set('v', '<leader>jm', [[<ESC><CMD>lua require('jdtls').extract_method(true)<CR>]], opts)
-  vim.keymap.set('n', '<leader>jr', vim.lsp.buf.code_action, opts)
-  vim.keymap.set('n', '<leader>jt', jdtls.test_class, opts)
-  vim.keymap.set('n', '<leader>jn', jdtls.test_nearest_method, opts)
-  vim.keymap.set('n', 'K', vim.lsp.buf.hover, opts)
-  vim.keymap.set('n', '<leader>rn', vim.lsp.buf.rename, opts)
-  vim.keymap.set('n', '<leader>ca', vim.lsp.buf.code_action, opts)
-
-  -- Optional: Setup lsp_signature if available
-  local sig_ok, lsp_signature = pcall(require, 'lsp_signature')
-  if sig_ok then
-    lsp_signature.on_attach({
-      bind = true,
-      floating_window_above_cur_line = false,
-      padding = '',
-      handler_opts = {
-        border = 'rounded',
-      },
-    }, bufnr)
-  end
+for abbrev, expansion in pairs(abbrevs) do
+  vim.api.nvim_buf_call(bufnr, function()
+    vim.cmd(string.format('iabbrev <buffer> %s %s', abbrev, expansion:gsub('\n', '\\n')))
+  end)
 end
 
--- Start or attach to JDTLS
-require('jdtls').start_or_attach(config)
+-- Auto-format on save (works with conform.nvim in your setup)
+vim.api.nvim_create_autocmd('BufWritePre', {
+  buffer = bufnr,
+  callback = function()
+    -- Use conform if available, otherwise fall back to LSP formatting
+    local conform_ok, conform = pcall(require, 'conform')
+    if conform_ok then
+      conform.format { bufnr = bufnr, async = false, lsp_format = 'fallback' }
+    else
+      vim.lsp.buf.format { async = false }
+    end
+  end,
+})
+
+-- File type associations for Spring Boot files
+vim.api.nvim_create_autocmd({ 'BufRead', 'BufNewFile' }, {
+  pattern = { 'application*.properties', 'application*.yml', 'application*.yaml' },
+  callback = function()
+    -- Set specific Spring Boot file handling
+    vim.bo.filetype = vim.fn.expand '%:e' == 'properties' and 'conf' or 'yaml'
+    -- Add Spring Boot specific snippets or settings here if needed
+  end,
+})
+
+-- Enhanced Spring Boot project detection
+local function is_spring_boot_project()
+  local pom_exists = vim.fn.filereadable 'pom.xml' == 1
+  local gradle_exists = vim.fn.filereadable 'build.gradle' == 1 or vim.fn.filereadable 'build.gradle.kts' == 1
+
+  if pom_exists then
+    local pom_content = vim.fn.readfile 'pom.xml'
+    for _, line in ipairs(pom_content) do
+      if string.match(line, 'spring%-boot') then
+        return true
+      end
+    end
+  end
+
+  if gradle_exists then
+    local gradle_files = vim.fn.glob('build.gradle*', false, true)
+    for _, file in ipairs(gradle_files) do
+      local gradle_content = vim.fn.readfile(file)
+      for _, line in ipairs(gradle_content) do
+        if string.match(line, 'spring%-boot') then
+          return true
+        end
+      end
+    end
+  end
+
+  return false
+end
+
+-- Show Spring Boot status in statusline if detected
+if is_spring_boot_project() then
+  vim.b.spring_boot_project = true
+  vim.notify('Spring Boot project detected', vim.log.levels.INFO)
+end
