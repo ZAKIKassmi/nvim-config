@@ -21,6 +21,12 @@ return {
       ['<CR>'] = 'open_tabnew',
     },
     filesystem = {
+      follow_current_file = true,
+      filtered_items = {
+        hide_dotfiles = false,
+        hide_by_name = {},
+        hide_by_pattern = {},
+      },
       window = {
         mappings = {
           ['\\'] = 'close_window',

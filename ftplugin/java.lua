@@ -1,6 +1,5 @@
 -- ftplugin/java.lua - Java configuration for Kickstart v3
 -- Compatible with existing blink.cmp, mason, and nvim-jdtls setup
-
 local bufnr = vim.api.nvim_get_current_buf()
 
 -- Java-specific buffer settings
@@ -50,7 +49,31 @@ local jdtls_setup = require 'jdtls.setup'
 
 -- Function to get the project root
 local function get_root_dir()
-  return jdtls_setup.find_root { '.git', 'mvnw', 'gradlew', 'pom.xml', 'build.gradle' } or vim.fn.getcwd()
+  local root = jdtls_setup.find_root { 'pom.xml', 'build.gradle', 'build.gradle.kts', 'mvnw', 'gradlew' }
+
+  -- Only return root if it actually contains Maven/Gradle files
+  if root then
+    return root
+  end
+
+  -- If no Maven/Gradle project found, don't start JDTLS
+  return nil
+end
+
+-- Add this check before starting JDTLS:
+local root = get_root_dir()
+if not root then
+  return -- Don't start JDTLS
+end
+
+-- Add this check before starting JDTLS (add after the get_root_dir function):
+local has_java_project = vim.fn.filereadable(root .. '/pom.xml') == 1
+  or vim.fn.filereadable(root .. '/build.gradle') == 1
+  or vim.fn.filereadable(root .. '/build.gradle.kts') == 1
+
+if not has_java_project then
+  vim.notify('No Java project found in: ' .. root, vim.log.levels.INFO)
+  return
 end
 
 -- Get OS-specific config
