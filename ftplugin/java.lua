@@ -227,57 +227,195 @@ local config = {
     vim.keymap.set('v', '<leader>jm', [[<ESC><CMD>lua require('jdtls').extract_method(true)<CR>]], { desc = 'Java: Extract [M]ethod', buffer = bufnr })
     vim.keymap.set('n', '<leader>jt', jdtls.test_class, { desc = 'Java: [T]est class', buffer = bufnr })
     vim.keymap.set('n', '<leader>jn', jdtls.test_nearest_method, { desc = 'Java: Test [N]earest method', buffer = bufnr })
-    vim.keymap.set('n', '<leader>ju', jdtls.update_project_config, { desc = 'Java: Update [P]roject config', buffer = bufnr })
+    vim.keymap.set('n', '<leader>ju', jdtls.update_project_config, { desc = 'Java: [U]pdate project config', buffer = bufnr })
 
-    -- Build and run commands (Spring Boot compatible)
-    vim.keymap.set('n', '<leader>jb', function()
-      local has_mvnw = vim.fn.filereadable './mvnw' == 1
-      local has_gradlew = vim.fn.filereadable './gradlew' == 1
+    -- Refresh/Reload dependencies (like IntelliJ's refresh)
+    vim.keymap.set('n', '<leader>jR', function()
+      local file_dir = vim.fn.expand '%:p:h'
+      local project_root = jdtls_setup.find_root({ 'pom.xml', 'build.gradle', 'build.gradle.kts', 'mvnw', 'gradlew' }, file_dir)
 
-      if has_mvnw then
-        vim.cmd '!./mvnw clean compile'
-      elseif has_gradlew then
-        vim.cmd '!./gradlew build'
-      else
-        vim.cmd '!mvn clean compile'
+      if not project_root then
+        vim.notify('No Java project found', vim.log.levels.WARN)
+        return
       end
+
+      local has_mvnw = vim.fn.filereadable(project_root .. '/mvnw') == 1
+      local has_gradlew = vim.fn.filereadable(project_root .. '/gradlew') == 1
+      local has_pom = vim.fn.filereadable(project_root .. '/pom.xml') == 1
+      local has_gradle = vim.fn.filereadable(project_root .. '/build.gradle') == 1 or vim.fn.filereadable(project_root .. '/build.gradle.kts') == 1
+
+      local original_dir = vim.fn.getcwd()
+      vim.cmd('cd ' .. project_root)
+
+      vim.notify('Refreshing dependencies...', vim.log.levels.INFO)
+
+      if has_gradlew or (has_gradle and not has_pom) then
+        if has_gradlew then
+          vim.fn.system './gradlew --refresh-dependencies build'
+        else
+          vim.fn.system 'gradle --refresh-dependencies build'
+        end
+      elseif has_mvnw or has_pom then
+        if has_mvnw then
+          vim.fn.system './mvnw dependency:resolve clean compile'
+        else
+          vim.fn.system 'mvn dependency:resolve clean compile'
+        end
+      else
+        vim.notify('No build tool found', vim.log.levels.WARN)
+        vim.cmd('cd ' .. original_dir)
+        return
+      end
+
+      vim.cmd('cd ' .. original_dir)
+
+      -- Update JDTLS project configuration
+      jdtls.update_project_config()
+      vim.notify('Dependencies refreshed successfully!', vim.log.levels.INFO)
+    end, { desc = 'Java: [R]efresh dependencies', buffer = bufnr })
+
+    -- Build command
+    vim.keymap.set('n', '<leader>jb', function()
+      local file_dir = vim.fn.expand '%:p:h'
+      local project_root = jdtls_setup.find_root({ 'pom.xml', 'build.gradle', 'build.gradle.kts', 'mvnw', 'gradlew' }, file_dir)
+
+      if not project_root then
+        vim.notify('No Java project found', vim.log.levels.WARN)
+        return
+      end
+
+      local has_mvnw = vim.fn.filereadable(project_root .. '/mvnw') == 1
+      local has_gradlew = vim.fn.filereadable(project_root .. '/gradlew') == 1
+      local has_pom = vim.fn.filereadable(project_root .. '/pom.xml') == 1
+      local has_gradle = vim.fn.filereadable(project_root .. '/build.gradle') == 1 or vim.fn.filereadable(project_root .. '/build.gradle.kts') == 1
+
+      local original_dir = vim.fn.getcwd()
+      vim.cmd('cd ' .. project_root)
+
+      if has_gradlew or (has_gradle and not has_pom) then
+        vim.cmd(has_gradlew and '!./gradlew build' or '!gradle build')
+      elseif has_mvnw or has_pom then
+        vim.cmd(has_mvnw and '!./mvnw clean compile' or '!mvn clean compile')
+      else
+        vim.notify('No build tool found', vim.log.levels.WARN)
+      end
+
+      vim.cmd('cd ' .. original_dir)
     end, { desc = 'Java: [B]uild project', buffer = bufnr })
 
+    -- Run command
     vim.keymap.set('n', '<leader>jr', function()
-      local has_mvnw = vim.fn.filereadable './mvnw' == 1
-      if has_mvnw then
-        vim.cmd '!./mvnw spring-boot:run'
-      else
-        vim.cmd '!mvn spring-boot:run'
+      local file_dir = vim.fn.expand '%:p:h'
+      local project_root = jdtls_setup.find_root({ 'pom.xml', 'build.gradle', 'build.gradle.kts', 'mvnw', 'gradlew' }, file_dir)
+
+      if not project_root then
+        vim.notify('No Java project found', vim.log.levels.WARN)
+        return
       end
+
+      local has_mvnw = vim.fn.filereadable(project_root .. '/mvnw') == 1
+      local has_gradlew = vim.fn.filereadable(project_root .. '/gradlew') == 1
+      local has_pom = vim.fn.filereadable(project_root .. '/pom.xml') == 1
+      local has_gradle = vim.fn.filereadable(project_root .. '/build.gradle') == 1 or vim.fn.filereadable(project_root .. '/build.gradle.kts') == 1
+
+      local original_dir = vim.fn.getcwd()
+      vim.cmd('cd ' .. project_root)
+
+      if has_gradlew or (has_gradle and not has_pom) then
+        vim.cmd(has_gradlew and '!./gradlew bootRun' or '!gradle bootRun')
+      elseif has_mvnw or has_pom then
+        vim.cmd(has_mvnw and '!./mvnw spring-boot:run' or '!mvn spring-boot:run')
+      else
+        vim.notify('No build tool found', vim.log.levels.WARN)
+      end
+
+      vim.cmd('cd ' .. original_dir)
     end, { desc = 'Java: [R]un Spring Boot', buffer = bufnr })
 
+    -- Run all tests
     vim.keymap.set('n', '<leader>jT', function()
-      local has_mvnw = vim.fn.filereadable './mvnw' == 1
-      if has_mvnw then
-        vim.cmd '!./mvnw test'
-      else
-        vim.cmd '!mvn test'
+      local file_dir = vim.fn.expand '%:p:h'
+      local project_root = jdtls_setup.find_root({ 'pom.xml', 'build.gradle', 'build.gradle.kts', 'mvnw', 'gradlew' }, file_dir)
+
+      if not project_root then
+        vim.notify('No Java project found', vim.log.levels.WARN)
+        return
       end
+
+      local has_mvnw = vim.fn.filereadable(project_root .. '/mvnw') == 1
+      local has_gradlew = vim.fn.filereadable(project_root .. '/gradlew') == 1
+      local has_pom = vim.fn.filereadable(project_root .. '/pom.xml') == 1
+      local has_gradle = vim.fn.filereadable(project_root .. '/build.gradle') == 1 or vim.fn.filereadable(project_root .. '/build.gradle.kts') == 1
+
+      local original_dir = vim.fn.getcwd()
+      vim.cmd('cd ' .. project_root)
+
+      if has_gradlew or (has_gradle and not has_pom) then
+        vim.cmd(has_gradlew and '!./gradlew test' or '!gradle test')
+      elseif has_mvnw or has_pom then
+        vim.cmd(has_mvnw and '!./mvnw test' or '!mvn test')
+      else
+        vim.notify('No build tool found', vim.log.levels.WARN)
+      end
+
+      vim.cmd('cd ' .. original_dir)
     end, { desc = 'Java: Run all [T]ests', buffer = bufnr })
 
     -- Spring Boot specific commands
     vim.keymap.set('n', '<leader>sb', function()
-      local has_mvnw = vim.fn.filereadable './mvnw' == 1
-      if has_mvnw then
-        vim.cmd '!./mvnw spring-boot:build-image'
-      else
-        vim.cmd '!mvn spring-boot:build-image'
+      local file_dir = vim.fn.expand '%:p:h'
+      local project_root = jdtls_setup.find_root({ 'pom.xml', 'build.gradle', 'build.gradle.kts', 'mvnw', 'gradlew' }, file_dir)
+
+      if not project_root then
+        vim.notify('No Java project found', vim.log.levels.WARN)
+        return
       end
+
+      local has_mvnw = vim.fn.filereadable(project_root .. '/mvnw') == 1
+      local has_gradlew = vim.fn.filereadable(project_root .. '/gradlew') == 1
+      local has_pom = vim.fn.filereadable(project_root .. '/pom.xml') == 1
+      local has_gradle = vim.fn.filereadable(project_root .. '/build.gradle') == 1 or vim.fn.filereadable(project_root .. '/build.gradle.kts') == 1
+
+      local original_dir = vim.fn.getcwd()
+      vim.cmd('cd ' .. project_root)
+
+      if has_gradlew or (has_gradle and not has_pom) then
+        vim.cmd(has_gradlew and '!./gradlew bootBuildImage' or '!gradle bootBuildImage')
+      elseif has_mvnw or has_pom then
+        vim.cmd(has_mvnw and '!./mvnw spring-boot:build-image' or '!mvn spring-boot:build-image')
+      else
+        vim.notify('No build tool found', vim.log.levels.WARN)
+      end
+
+      vim.cmd('cd ' .. original_dir)
     end, { desc = 'Spring Boot: [B]uild image', buffer = bufnr })
 
     vim.keymap.set('n', '<leader>sd', function()
-      local has_mvnw = vim.fn.filereadable './mvnw' == 1
-      if has_mvnw then
-        vim.cmd '!./mvnw dependency:tree'
-      else
-        vim.cmd '!mvn dependency:tree'
+      local file_dir = vim.fn.expand '%:p:h'
+      local project_root = jdtls_setup.find_root({ 'pom.xml', 'build.gradle', 'build.gradle.kts', 'mvnw', 'gradlew' }, file_dir)
+
+      if not project_root then
+        vim.notify('No Java project found', vim.log.levels.WARN)
+        return
       end
+
+      local has_mvnw = vim.fn.filereadable(project_root .. '/mvnw') == 1
+      local has_gradlew = vim.fn.filereadable(project_root .. '/gradlew') == 1
+      local has_pom = vim.fn.filereadable(project_root .. '/pom.xml') == 1
+      local has_gradle = vim.fn.filereadable(project_root .. '/build.gradle') == 1 or vim.fn.filereadable(project_root .. '/build.gradle.kts') == 1
+
+      local original_dir = vim.fn.getcwd()
+      vim.cmd('cd ' .. project_root)
+
+      if has_gradlew or (has_gradle and not has_pom) then
+        vim.cmd(has_gradlew and '!./gradlew dependencies' or '!gradle dependencies')
+      elseif has_mvnw or has_pom then
+        vim.cmd(has_mvnw and '!./mvnw dependency:tree' or '!mvn dependency:tree')
+      else
+        vim.notify('No build tool found', vim.log.levels.WARN)
+      end
+
+      vim.cmd('cd ' .. original_dir)
     end, { desc = 'Spring Boot: Show [D]ependencies', buffer = bufnr })
 
     -- Auto-organize imports on save
