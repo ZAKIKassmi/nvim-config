@@ -779,8 +779,20 @@ require('lazy').setup({
 
       completion = {
         -- By default, you may press `<c-space>` to show the documentation.
-        -- Optionally, set `auto_show = true` to show the documentation after a delay.
-        documentation = { auto_show = true, auto_show_delay_ms = 500 },
+        menu = {
+          border = 'rounded',
+          -- This controls the column layout (Icon | Text | Description)
+          draw = {
+            columns = { { 'kind_icon', 'label', 'label_description', gap = 1 }, { 'kind' } },
+          },
+        },
+
+        -- 2. ADD BORDERS to the documentation window
+        documentation = {
+          auto_show = true,
+          auto_show_delay_ms = 500,
+          window = { border = 'rounded' },
+        },
       },
 
       sources = {
@@ -941,6 +953,7 @@ require('lazy').setup({
     -- Lazy loading is not recommended because it is very tricky to make it work correctly in all situations.
     lazy = false,
   },
+
   -- The following comments only work if you have downloaded the kickstart repo, not just copy pasted the
   -- init.lua. If you want these files, they are in the repository, so you can just download them and
   -- place them in the correct locations.
