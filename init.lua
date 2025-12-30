@@ -94,16 +94,21 @@ vim.keymap.set('t', '<Esc><Esc>', '<C-\\><C-n>', { desc = 'Exit terminal mode' }
 --  Use CTRL+<hjkl> to switch between windows
 --
 --  See `:help wincmd` for a list of all window commands
-vim.keymap.set('n', '<C-h>', '<C-w><C-h>', { desc = 'Move focus to the left window' })
-vim.keymap.set('n', '<C-l>', '<C-w><C-l>', { desc = 'Move focus to the right window' })
-vim.keymap.set('n', '<C-j>', '<C-w><C-j>', { desc = 'Move focus to the lower window' })
-vim.keymap.set('n', '<C-k>', '<C-w><C-k>', { desc = 'Move focus to the upper window' })
+-- vim.keymap.set('n', '<C-h>', '<C-w><C-h>', { desc = 'Move focus to the left window' })
+-- vim.keymap.set('n', '<C-l>', '<C-w><C-l>', { desc = 'Move focus to the right window' })
+-- vim.keymap.set('n', '<C-j>', '<C-w><C-j>', { desc = 'Move focus to the lower window' })
+-- vim.keymap.set('n', '<C-k>', '<C-w><C-k>', { desc = 'Move focus to the upper window' })
 
 -- NOTE: Some terminals have colliding keymaps or are not able to send distinct keycodes
 -- vim.keymap.set("n", "<C-S-h>", "<C-w>H", { desc = "Move window to the left" })
 -- vim.keymap.set("n", "<C-S-l>", "<C-w>L", { desc = "Move window to the right" })
 -- vim.keymap.set("n", "<C-S-j>", "<C-w>J", { desc = "Move window to the lower" })
 -- vim.keymap.set("n", "<C-S-k>", "<C-w>K", { desc = "Move window to the upper" })
+
+-- Standard Neovim Split Keymaps
+vim.keymap.set('n', '<leader>|', '<cmd>vsplit<CR>', { desc = 'Vertical Split' })
+vim.keymap.set('n', '<leader>-', '<cmd>split<CR>', { desc = 'Horizontal Split' })
+vim.keymap.set('n', '<leader>x', '<cmd>close<CR>', { desc = 'Close Split' })
 
 -- [[ Basic Autocommands ]]
 --  See `:help lua-guide-autocommands`
@@ -828,14 +833,18 @@ require('lazy').setup({
     config = function()
       ---@diagnostic disable-next-line: missing-fields
       require('tokyonight').setup {
+        -- [NEW] Enable transparency
+        transparent = true,
+
         styles = {
           comments = { italic = false }, -- Disable italics in comments
+          -- [NEW] Make these transparent too so they don't look like solid blocks
+          sidebars = 'transparent',
+          floats = 'transparent',
         },
       }
 
       -- Load the colorscheme here.
-      -- Like many other themes, this one has different styles, and you could load
-      -- any other, such as 'tokyonight-storm', 'tokyonight-moon', or 'tokyonight-day'.
       vim.cmd.colorscheme 'tokyonight-night'
     end,
   },
@@ -952,6 +961,45 @@ require('lazy').setup({
 
     -- Lazy loading is not recommended because it is very tricky to make it work correctly in all situations.
     lazy = false,
+  },
+
+  -- screen splite
+  {
+    'mrjones2014/smart-splits.nvim',
+    lazy = false, -- Load immediately to make mappings work
+    config = function()
+      -- Recommended Mappings
+      -- 1. Resize Mode (Alt + hjkl)
+      vim.keymap.set('n', '<A-h>', require('smart-splits').resize_left)
+      vim.keymap.set('n', '<A-j>', require('smart-splits').resize_down)
+      vim.keymap.set('n', '<A-k>', require('smart-splits').resize_up)
+      vim.keymap.set('n', '<A-l>', require('smart-splits').resize_right)
+
+      -- 2. Navigation (Ctrl + hjkl)
+      vim.keymap.set('n', '<C-h>', require('smart-splits').move_cursor_left)
+      vim.keymap.set('n', '<C-j>', require('smart-splits').move_cursor_down)
+      vim.keymap.set('n', '<C-k>', require('smart-splits').move_cursor_up)
+      vim.keymap.set('n', '<C-l>', require('smart-splits').move_cursor_right)
+
+      -- 3. Swapping Buffers (Leader + wh/wj/wk/wl) -> "Window Move"
+      vim.keymap.set('n', '<leader>wh', require('smart-splits').swap_buf_left)
+      vim.keymap.set('n', '<leader>wj', require('smart-splits').swap_buf_down)
+      vim.keymap.set('n', '<leader>wk', require('smart-splits').swap_buf_up)
+      vim.keymap.set('n', '<leader>wl', require('smart-splits').swap_buf_right)
+    end,
+  },
+  -- focus on the current chosen screen
+  {
+    'nvim-focus/focus.nvim',
+    event = 'WinEnter',
+    config = function()
+      require('focus').setup {
+        -- Width of the focused window (golden ratio)
+        ui = {
+          signcolumn = false, -- Hide signcolumn in unfocused windows
+        },
+      }
+    end,
   },
 
   -- The following comments only work if you have downloaded the kickstart repo, not just copy pasted the
