@@ -611,6 +611,7 @@ require('lazy').setup({
             },
           },
         },
+        dockerls = {},
         eslint = {},
         cssls = {},
         jsonls = {},
@@ -648,6 +649,8 @@ require('lazy').setup({
       local ensure_installed = vim.tbl_keys(servers or {})
       vim.list_extend(ensure_installed, {
         'stylua', -- Used to format Lua code
+        'dockerls', -- Language Server (Auto-complete, basic checks)
+        'hadolint', -- Linter (Best-in-class Dockerfile best practices)
       })
       require('mason-tool-installer').setup { ensure_installed = ensure_installed }
 
@@ -891,6 +894,7 @@ require('lazy').setup({
   },
   { -- Highlight, edit, and navigate code
     'nvim-treesitter/nvim-treesitter',
+    branch = 'master', -- <-- THE MODIFICATION
     build = ':TSUpdate',
     main = 'nvim-treesitter.configs', -- Sets main module to use for opts
     -- [[ Configure Treesitter ]] See `:help nvim-treesitter`
@@ -912,6 +916,8 @@ require('lazy').setup({
         'tsx',
         'css',
         'json',
+        'java',
+        'dockerfile',
       },
       -- Autoinstall languages that are not installed
       auto_install = true,
@@ -1028,7 +1034,6 @@ require('lazy').setup({
       },
     },
   },
-
   -- The following comments only work if you have downloaded the kickstart repo, not just copy pasted the
   -- init.lua. If you want these files, they are in the repository, so you can just download them and
   -- place them in the correct locations.
