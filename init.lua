@@ -1,5 +1,3 @@
--- Set <space> as the leader key
--- See `:help mapleader`
 --  NOTE: Must happen before plugins are loaded (otherwise wrong leader will be used)
 vim.g.mapleader = ' '
 vim.g.maplocalleader = ' '
@@ -140,7 +138,6 @@ local rtp = vim.opt.rtp
 rtp:prepend(lazypath)
 
 --  To update plugins you can run
---    :Lazy update
 require('lazy').setup({
   'NMAC427/guess-indent.nvim', -- Detect tabstop and shiftwidth automatically
 
@@ -388,6 +385,10 @@ require('lazy').setup({
 
       -- Allows extra capabilities provided by blink.cmp
       'saghen/blink.cmp',
+
+      -- YAML Intelligence
+      'b0o/SchemaStore.nvim',
+      'someone-stole-my-name/yaml-companion.nvim',
     },
     config = function()
       -- Brief aside: **What is LSP?**
@@ -583,34 +584,6 @@ require('lazy').setup({
         -- But for many setups, the LSP (`ts_ls`) will work just fine
         -- ts_ls = {},
         --
-        vtsls = {
-          settings = {
-            complete_function_calls = true,
-            vtsls = {
-              enableMoveToFileCodeAction = true, -- standard "Move to file" refactoring
-              autoUseWorkspaceTsdk = true, -- USES YOUR PROJECT'S TYPESCRIPT VERSION
-              experimental = {
-                completion = {
-                  enableServerSideFuzzyMatch = true, -- THE PERFORMANCE FIX: filters completions on server, not client
-                },
-              },
-            },
-            typescript = {
-              updateImportsOnFileMove = { enabled = 'always' }, -- Auto-updates imports when you rename files
-              suggest = {
-                completeFunctionCalls = true, -- Auto-adds () when selecting a function
-              },
-              inlayHints = {
-                enumMemberValues = { enabled = true },
-                functionLikeReturnTypes = { enabled = true },
-                parameterNames = { enabled = 'literals' },
-                parameterTypes = { enabled = true },
-                propertyDeclarationTypes = { enabled = true },
-                variableTypes = { enabled = false },
-              },
-            },
-          },
-        },
         dockerls = {},
         eslint = {},
         cssls = {},
@@ -711,6 +684,8 @@ require('lazy').setup({
         typescriptreact = { 'prettierd', 'prettier', stop_after_first = true },
         css = { 'prettierd', 'prettier', stop_after_first = true },
         json = { 'prettierd', 'prettier', stop_after_first = true },
+
+        yaml = { 'prettierd', 'prettier', stop_after_first = true },
       },
     },
   },
@@ -958,11 +933,11 @@ require('lazy').setup({
       require('oil').setup {
         columns = { 'icon' },
         keymaps = {
-          ['<leader>sh'] = 'actions.toggle_hidden',
+          ['.'] = 'actions.toggle_hidden',
         },
       }
 
-      vim.keymap.set('n', '<leader>o', '<CMD>Oil<CR>', { desc = 'Open parent directory' })
+      vim.keymap.set('n', '-', '<CMD>Oil<CR>', { desc = 'Open parent directory' })
     end,
 
     -- Lazy loading is not recommended because it is very tricky to make it work correctly in all situations.
@@ -1014,7 +989,7 @@ require('lazy').setup({
     event = 'VeryLazy',
     dependencies = {
       'MunifTanjim/nui.nvim',
-      'rcarriga/nvim-notify', -- Optional: for nice notifications
+      'rcarriga/nvim-notify',
     },
     opts = {
       lsp = {
@@ -1032,6 +1007,57 @@ require('lazy').setup({
         inc_rename = false, -- enables an input dialog for inc-rename.nvim
         lsp_doc_border = false, -- add a border to hover docs and signature help
       },
+    },
+  },
+  {
+    'pmizio/typescript-tools.nvim',
+    dependencies = {
+      'nvim-lua/plenary.nvim',
+      'neovim/nvim-lspconfig',
+    },
+    opts = {
+      handlers = {
+        ['textDocument/publishDiagnostics'] = function(err, result, ctx, config)
+          if result.diagnostics then
+            -- TypeScript Error Codes to ignore:
+            local ignored_codes = {
+              [6133] = true, -- 'x' is declared but never read
+              [6192] = true, -- All imports in import declaration are unused
+              [6196] = true, -- 'x' is declared but never used
+              [6198] = true, -- All destructured elements are unused
+            }
+
+            local new_diagnostics = {}
+            for _, diagnostic in ipairs(result.diagnostics) do
+              if not ignored_codes[diagnostic.code] then
+                table.insert(new_diagnostics, diagnostic)
+              end
+            end
+            result.diagnostics = new_diagnostics
+          end
+
+          -- Pass the filtered diagnostics to the default handler
+          vim.lsp.diagnostic.on_publish_diagnostics(err, result, ctx, config)
+        end,
+      },
+      on_attach = function(_, bufnr)
+        local map = vim.keymap.set
+        local opts = { buffer = bufnr, silent = true }
+
+        -- Imports
+        map('n', '<leader>oi', '<cmd>TSToolsOrganizeImports<CR>', opts)
+        map('n', '<leader>os', '<cmd>TSToolsSortImports<CR>', opts)
+        map('n', '<leader>ru', '<cmd>TSToolsRemoveUnused<CR>', opts)
+        map('n', '<leader>ri', '<cmd>TSToolsRemoveUnusedImports<CR>', opts)
+        map('n', '<leader>am', '<cmd>TSToolsAddMissingImports<CR>', opts)
+
+        -- Fixes & navigation
+        map('n', '<leader>fa', '<cmd>TSToolsFixAll<CR>', opts)
+        map('n', '<leader>gs', '<cmd>TSToolsGoToSourceDefinition<CR>', opts)
+
+        -- Standard LSP
+        map('n', '<leader>rn', vim.lsp.buf.rename, opts)
+      end,
     },
   },
   -- The following comments only work if you have downloaded the kickstart repo, not just copy pasted the
