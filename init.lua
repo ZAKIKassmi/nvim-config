@@ -82,6 +82,9 @@ vim.keymap.set('n', '<leader>q', vim.diagnostic.setloclist, { desc = 'Open diagn
 -- or just use <C-\><C-n> to exit terminal mode
 vim.keymap.set('t', '<Esc><Esc>', '<C-\\><C-n>', { desc = 'Exit terminal mode' })
 
+-- Disable netrw to prevent conflicts
+vim.g.loaded_netrw = 1
+vim.g.loaded_netrwPlugin = 1
 -- TIP: Disable arrow keys in normal mode
 -- vim.keymap.set('n', '<left>', '<cmd>echo "Use h to move!!"<CR>')
 -- vim.keymap.set('n', '<right>', '<cmd>echo "Use l to move!!"<CR>')
@@ -91,11 +94,11 @@ vim.keymap.set('t', '<Esc><Esc>', '<C-\\><C-n>', { desc = 'Exit terminal mode' }
 -- Keybinds to make split navigation easier.
 --  Use CTRL+<hjkl> to switch between windows
 --
---  See `:help wincmd` for a list of all window commands
--- vim.keymap.set('n', '<C-h>', '<C-w><C-h>', { desc = 'Move focus to the left window' })
--- vim.keymap.set('n', '<C-l>', '<C-w><C-l>', { desc = 'Move focus to the right window' })
--- vim.keymap.set('n', '<C-j>', '<C-w><C-j>', { desc = 'Move focus to the lower window' })
--- vim.keymap.set('n', '<C-k>', '<C-w><C-k>', { desc = 'Move focus to the upper window' })
+-- See `:help wincmd` for a list of all window commands
+vim.keymap.set('n', '<C-h>', '<C-w><C-h>', { desc = 'Move focus to the left window' })
+vim.keymap.set('n', '<C-l>', '<C-w><C-l>', { desc = 'Move focus to the right window' })
+vim.keymap.set('n', '<C-j>', '<C-w><C-j>', { desc = 'Move focus to the lower window' })
+vim.keymap.set('n', '<C-k>', '<C-w><C-k>', { desc = 'Move focus to the upper window' })
 
 -- NOTE: Some terminals have colliding keymaps or are not able to send distinct keycodes
 -- vim.keymap.set("n", "<C-S-h>", "<C-w>H", { desc = "Move window to the left" })
@@ -108,6 +111,44 @@ vim.keymap.set('n', '<leader>|', '<cmd>vsplit<CR>', { desc = 'Vertical Split' })
 vim.keymap.set('n', '<leader>-', '<cmd>split<CR>', { desc = 'Horizontal Split' })
 vim.keymap.set('n', '<leader>cs', '<cmd>close<CR>', { desc = 'Close Split' })
 
+-- barbar (tabs manager) keymaps
+-- Buffer/Tab Navigation
+vim.keymap.set('n', '<Tab>', '<Cmd>BufferNext<CR>', { desc = 'Next buffer' })
+vim.keymap.set('n', '<S-Tab>', '<Cmd>BufferPrevious<CR>', { desc = 'Previous buffer' })
+
+-- Jump to specific buffer by position
+vim.keymap.set('n', '<leader>1', '<Cmd>BufferGoto 1<CR>', { desc = 'Go to buffer 1' })
+vim.keymap.set('n', '<leader>2', '<Cmd>BufferGoto 2<CR>', { desc = 'Go to buffer 2' })
+vim.keymap.set('n', '<leader>3', '<Cmd>BufferGoto 3<CR>', { desc = 'Go to buffer 3' })
+vim.keymap.set('n', '<leader>4', '<Cmd>BufferGoto 4<CR>', { desc = 'Go to buffer 4' })
+vim.keymap.set('n', '<leader>5', '<Cmd>BufferGoto 5<CR>', { desc = 'Go to buffer 5' })
+vim.keymap.set('n', '<leader>6', '<Cmd>BufferGoto 6<CR>', { desc = 'Go to buffer 6' })
+vim.keymap.set('n', '<leader>7', '<Cmd>BufferGoto 7<CR>', { desc = 'Go to buffer 7' })
+vim.keymap.set('n', '<leader>8', '<Cmd>BufferGoto 8<CR>', { desc = 'Go to buffer 8' })
+vim.keymap.set('n', '<leader>9', '<Cmd>BufferGoto 9<CR>', { desc = 'Go to buffer 9' })
+vim.keymap.set('n', '<leader>0', '<Cmd>BufferLast<CR>', { desc = 'Go to last buffer' })
+
+-- Close/Delete buffers
+vim.keymap.set('n', '<leader>x', '<Cmd>BufferClose<CR>', { desc = 'Close current buffer' })
+vim.keymap.set('n', '<leader>X', '<Cmd>BufferClose!<CR>', { desc = 'Force close buffer' })
+vim.keymap.set('n', '<leader>bo', '<Cmd>BufferCloseAllButCurrent<CR>', { desc = 'Close all [B]uffers except current' })
+vim.keymap.set('n', '<leader>bh', '<Cmd>BufferCloseBuffersLeft<CR>', { desc = 'Close all buffers to left' })
+vim.keymap.set('n', '<leader>bl', '<Cmd>BufferCloseBuffersRight<CR>', { desc = 'Close all buffers to right' })
+
+-- Reorder buffers
+vim.keymap.set('n', '<A-<>', '<Cmd>BufferMovePrevious<CR>', { desc = 'Move buffer left' })
+vim.keymap.set('n', '<A->>', '<Cmd>BufferMoveNext<CR>', { desc = 'Move buffer right' })
+
+-- Pin/Unpin buffer (keeps it at the start of the tabline)
+vim.keymap.set('n', '<leader>bp', '<Cmd>BufferPin<CR>', { desc = 'Toggle [B]uffer [P]in' })
+
+-- Pick a buffer using hints
+vim.keymap.set('n', '<leader>bb', '<Cmd>BufferPick<CR>', { desc = 'Pick [B]uffer' })
+
+-- Sort buffers
+vim.keymap.set('n', '<leader>bd', '<Cmd>BufferOrderByDirectory<CR>', { desc = 'Sort by [D]irectory' })
+vim.keymap.set('n', '<leader>bn', '<Cmd>BufferOrderByBufferNumber<CR>', { desc = 'Sort by buffer [N]umber' })
+vim.keymap.set('n', '<leader>be', '<Cmd>BufferOrderByExtension<CR>', { desc = 'Sort by [E]xtension' })
 -- [[ Basic Autocommands ]]
 --  See `:help lua-guide-autocommands`
 
@@ -867,6 +908,7 @@ require('lazy').setup({
       --  Check out: https://github.com/echasnovski/mini.nvim
     end,
   },
+
   { -- Highlight, edit, and navigate code
     'nvim-treesitter/nvim-treesitter',
     branch = 'master', -- <-- THE MODIFICATION
@@ -920,55 +962,140 @@ require('lazy').setup({
       require('nvim-ts-autotag').setup()
     end,
   },
+  {
+    'nvim-neo-tree/neo-tree.nvim',
+    branch = 'v3.x',
+    dependencies = {
+      'nvim-lua/plenary.nvim',
+      'nvim-tree/nvim-web-devicons', -- not strictly required, but recommended
+      'MunifTanjim/nui.nvim',
+    },
+    -- Keys section for lazy-loading
+    keys = {
+      {
+        '-',
+        function()
+          require('neo-tree.command').execute { toggle = true, dir = vim.uv.cwd() }
+        end,
+        desc = 'Toggle Neo-tree',
+      },
+    },
+    -- Configuration options
+    opts = {
+      -- VS Code Behavior: Close if it's the last window
+      close_if_last_window = true,
+
+      -- VS Code Behavior: Git status colors
+      enable_git_status = true,
+      enable_diagnostics = true,
+
+      -- VS Code Behavior: Filesystem settings
+      filesystem = {
+        follow_current_file = {
+          enabled = true, -- Focus the file you are editing in the tree
+          leave_dirs_open = true, -- Close folders that aren't active
+        },
+        use_libuv_file_watcher = true, -- Auto-update when files change externally
+        filtered_items = {
+          visible = false, -- hide hidden files by default
+          hide_dotfiles = false,
+          hide_gitignored = true,
+        },
+      },
+
+      -- Visual settings to look like VS Code
+      default_component_configs = {
+        indent = {
+          with_expanders = true, -- Use arrows instead of indentation lines
+          expander_collapsed = '',
+          expander_expanded = '',
+        },
+        git_status = {
+          symbols = {
+            added = '✚',
+            modified = '',
+            deleted = '✖',
+            renamed = '󰁕',
+            untracked = '',
+            ignored = '',
+            unstaged = '󰄱',
+            staged = '',
+            conflict = '',
+          },
+        },
+      },
+
+      -- Window settings
+      window = {
+        position = 'right', -- Your requested position
+        width = 30,
+        mappings = {
+          ['<2-LeftMouse>'] = 'open',
+          ['<cr>'] = 'open',
+          ['l'] = 'open',
+        },
+      },
+    },
+  },
 
   -- Oil file explorer
-  {
-    'stevearc/oil.nvim',
-    ---@module 'oil'
-    ---@type oil.SetupOpts
-    opts = {},
-    -- Use web_dev_icons
-    dependencies = { 'nvim-tree/nvim-web-devicons' },
-    config = function()
-      require('oil').setup {
-        columns = { 'icon' },
-        keymaps = {
-          ['.'] = 'actions.toggle_hidden',
-        },
-      }
-
-      vim.keymap.set('n', '-', '<CMD>Oil<CR>', { desc = 'Open parent directory' })
-    end,
-
-    -- Lazy loading is not recommended because it is very tricky to make it work correctly in all situations.
-    lazy = false,
-  },
+  -- {
+  --   'stevearc/oil.nvim',
+  --   ---@module 'oil'
+  --   ---@type oil.SetupOpts
+  --   opts = {},
+  --   -- Use web_dev_icons
+  --   dependencies = { 'nvim-tree/nvim-web-devicons' },
+  --   config = function()
+  --     require('oil').setup {
+  --       columns = { 'icon' },
+  --       keymaps = {
+  --         ['.'] = 'actions.toggle_hidden',
+  --       },
+  --     }
+  --
+  --     vim.keymap.set('n', '-', '<CMD>Oil<CR>', { desc = 'Open parent directory' })
+  --   end,
+  --
+  --   -- Lazy loading is not recommended because it is very tricky to make it work correctly in all situations.
+  --   lazy = false,
+  -- },
 
   -- screen splite
-  {
-    'mrjones2014/smart-splits.nvim',
-    lazy = false, -- Load immediately to make mappings work
-    config = function()
-      -- Recommended Mappings
-      -- 1. Resize Mode (Alt + hjkl)
-      vim.keymap.set('n', '<A-h>', require('smart-splits').resize_left)
-      vim.keymap.set('n', '<A-j>', require('smart-splits').resize_down)
-      vim.keymap.set('n', '<A-k>', require('smart-splits').resize_up)
-      vim.keymap.set('n', '<A-l>', require('smart-splits').resize_right)
-
-      -- 2. Navigation (Ctrl + hjkl)
-      vim.keymap.set('n', '<C-h>', require('smart-splits').move_cursor_left)
-      vim.keymap.set('n', '<C-j>', require('smart-splits').move_cursor_down)
-      vim.keymap.set('n', '<C-k>', require('smart-splits').move_cursor_up)
-      vim.keymap.set('n', '<C-l>', require('smart-splits').move_cursor_right)
-
-      -- 3. Swapping Buffers (Leader + wh/wj/wk/wl) -> "Window Move"
-      vim.keymap.set('n', '<leader>wh', require('smart-splits').swap_buf_left)
-      vim.keymap.set('n', '<leader>wj', require('smart-splits').swap_buf_down)
-      vim.keymap.set('n', '<leader>wk', require('smart-splits').swap_buf_up)
-      vim.keymap.set('n', '<leader>wl', require('smart-splits').swap_buf_right)
-    end,
-  },
+  -- {
+  --   'mrjones2014/smart-splits.nvim',
+  --   lazy = false, -- mappings need to exist immediately
+  --   config = function()
+  --     local smart_splits = require 'smart-splits'
+  --
+  --     -- helper: only run if more than 1 window exists
+  --     local function only_if_split(fn)
+  --       return function()
+  --         if vim.fn.winnr '$' > 1 then
+  --           fn()
+  --         end
+  --       end
+  --     end
+  --
+  --     -- Resize (Alt + hjkl)
+  --     vim.keymap.set('n', '<A-h>', only_if_split(smart_splits.resize_left))
+  --     vim.keymap.set('n', '<A-j>', only_if_split(smart_splits.resize_down))
+  --     vim.keymap.set('n', '<A-k>', only_if_split(smart_splits.resize_up))
+  --     vim.keymap.set('n', '<A-l>', only_if_split(smart_splits.resize_right))
+  --
+  --     -- Navigate (Ctrl + hjkl)
+  --     vim.keymap.set('n', '<C-h>', only_if_split(smart_splits.move_cursor_left))
+  --     vim.keymap.set('n', '<C-j>', only_if_split(smart_splits.move_cursor_down))
+  --     vim.keymap.set('n', '<C-k>', only_if_split(smart_splits.move_cursor_up))
+  --     vim.keymap.set('n', '<C-l>', only_if_split(smart_splits.move_cursor_right))
+  --
+  --     -- Swap Buffers (Leader + w + direction)
+  --     vim.keymap.set('n', '<leader>wh', only_if_split(smart_splits.swap_buf_left))
+  --     vim.keymap.set('n', '<leader>wj', only_if_split(smart_splits.swap_buf_down))
+  --     vim.keymap.set('n', '<leader>wk', only_if_split(smart_splits.swap_buf_up))
+  --     vim.keymap.set('n', '<leader>wl', only_if_split(smart_splits.swap_buf_right))
+  --   end,
+  -- },
   -- focus on the current chosen screen
   {
     'nvim-focus/focus.nvim',
@@ -982,56 +1109,365 @@ require('lazy').setup({
       }
     end,
   },
+  --
+  {
+    'yioneko/nvim-vtsls',
+    ft = { 'typescript', 'javascript', 'typescriptreact', 'javascriptreact' },
+    dependencies = { 'neovim/nvim-lspconfig' },
+    config = function()
+      local lspconfig = require 'lspconfig'
+      local lspconfig_util = require 'lspconfig.util'
+
+      -- 1. CRITICAL: Override the default lspconfig definition with the plugin's version
+      -- This ensures the extra commands (VtsExec) and correct capabilities are loaded.
+      require('lspconfig.configs').vtsls = require('vtsls').lspconfig
+
+      -- 2. Define the filter for unused variables (your custom logic)
+      local function filter_diagnostics(err, result, ctx, config)
+        if result.diagnostics then
+          local ignored_codes = { [6133] = true, [6192] = true, [6196] = true, [6198] = true }
+          local new_diagnostics = {}
+          for _, diagnostic in ipairs(result.diagnostics) do
+            if not ignored_codes[diagnostic.code] then
+              table.insert(new_diagnostics, diagnostic)
+            end
+          end
+          result.diagnostics = new_diagnostics
+        end
+        vim.lsp.diagnostic.on_publish_diagnostics(err, result, ctx, config)
+      end
+
+      -- 3. Setup the server
+      lspconfig.vtsls.setup {
+        root_dir = lspconfig_util.root_pattern('.git', 'tsconfig.json'),
+        handlers = {
+          ['textDocument/publishDiagnostics'] = filter_diagnostics,
+        },
+        settings = {
+          vtsls = {
+            enableMoveToFileCodeAction = true,
+            autoUseWorkspaceTsdk = true,
+            experimental = { completion = { enableServerSideFuzzyMatch = true } },
+          },
+          typescript = {
+            updateImportsOnFileMove = { enabled = 'always' },
+          },
+        },
+        on_attach = function(client, bufnr)
+          local map = vim.keymap.set
+          local opts = { buffer = bufnr, silent = true }
+
+          -- VTSLS Specific Mappings
+          map('n', '<leader>oi', '<cmd>VtsExec organize_imports<CR>', opts)
+          map('n', '<leader>os', '<cmd>VtsExec sort_imports<CR>', opts)
+          map('n', '<leader>ru', '<cmd>VtsExec remove_unused<CR>', opts)
+          map('n', '<leader>ri', '<cmd>VtsExec remove_unused_imports<CR>', opts)
+          map('n', '<leader>am', '<cmd>VtsExec add_missing_imports<CR>', opts)
+          map('n', '<leader>fa', '<cmd>VtsExec fix_all<CR>', opts)
+          map('n', '<leader>gtsd', '<cmd>VtsExec go_to_source_definition<CR>', opts)
+
+          -- Standard LSP Mappings
+          map('n', '<leader>rn', vim.lsp.buf.rename, opts)
+
+          -- FORCE "Find References" to use built-in LSP if Telescope is failing
+          map('n', 'gr', vim.lsp.buf.references, opts)
+        end,
+      }
+    end,
+  },
+
+  -- {
+  --   'pmizio/typescript-tools.nvim',
+  --   dependencies = {
+  --     'nvim-lua/plenary.nvim',
+  --     'neovim/nvim-lspconfig',
+  --   },
+  --
+  --   config = function()
+  --     local lspconfig_util = require 'lspconfig.util'
+  --
+  --     require('typescript-tools').setup {
+  --       -- Force the real monorepo root
+  --       root_dir = lspconfig_util.root_pattern('.git', 'tsconfig.json'),
+  --
+  --       handlers = {
+  --         ['textDocument/publishDiagnostics'] = function(err, result, ctx, config)
+  --           if result.diagnostics then
+  --             local ignored_codes = {
+  --               [6133] = true, -- 'x' is declared but never read
+  --               [6192] = true, -- All imports in import declaration are unused
+  --               [6196] = true, -- 'x' is declared but never used
+  --               [6198] = true, -- All destructured elements are unused
+  --             }
+  --             local new_diagnostics = {}
+  --             for _, diagnostic in ipairs(result.diagnostics) do
+  --               if not ignored_codes[diagnostic.code] then
+  --                 table.insert(new_diagnostics, diagnostic)
+  --               end
+  --             end
+  --             result.diagnostics = new_diagnostics
+  --           end
+  --
+  --           vim.lsp.diagnostic.on_publish_diagnostics(err, result, ctx, config)
+  --         end,
+  --       },
+  --
+  --       on_attach = function(_, bufnr)
+  --         local map = vim.keymap.set
+  --         local opts = { buffer = bufnr, silent = true }
+  --
+  --         -- Imports
+  --         map('n', '<leader>oi', '<cmd>TSToolsOrganizeImports<CR>', opts)
+  --         map('n', '<leader>os', '<cmd>TSToolsSortImports<CR>', opts)
+  --         map('n', '<leader>ru', '<cmd>TSToolsRemoveUnused<CR>', opts)
+  --         map('n', '<leader>ri', '<cmd>TSToolsRemoveUnusedImports<CR>', opts)
+  --         map('n', '<leader>am', '<cmd>TSToolsAddMissingImports<CR>', opts)
+  --
+  --         -- Fixes & navigation
+  --         map('n', '<leader>fa', '<cmd>TSToolsFixAll<CR>', opts)
+  --         map('n', '<leader>gtsd', '<cmd>TSToolsGoToSourceDefinition<CR>', opts)
+  --
+  --         -- Standard LSP
+  --         map('n', '<leader>rn', vim.lsp.buf.rename, opts)
+  --       end,
+  --     }
+  --   end,
+  -- },
 
   {
-    'pmizio/typescript-tools.nvim',
+    'romgrk/barbar.nvim',
+    dependencies = {
+      'lewis6991/gitsigns.nvim',
+      'nvim-tree/nvim-web-devicons',
+    },
+    init = function()
+      vim.g.barbar_auto_setup = false
+    end,
+    opts = {
+      -- 1. Configure the icons to be minimal circles
+      icons = {
+        -- Use a dot for the close button or modified status
+        button = '●',
+        modified = { button = '●' },
+
+        -- Optional: Hide filetype icons if you want ONLY the circle
+        -- filetype = { enabled = false },
+
+        -- Configure separators to be clean/invisible if desired
+        separator = { left = ' ', right = '' },
+
+        -- Set inactive/visible states to be more subtle if needed
+        inactive = { button = '○' }, -- Hollow circle for inactive?
+      },
+    },
+    config = function(_, opts)
+      require('barbar').setup(opts)
+
+      -- 2. THE IMPORTANT PART: Color the Active Tab's Circle Green
+      -- We customize the highlight groups to make the active components green.
+
+      -- local fg_green = '#9ece6a' -- TokyoNight Green (Adjust hex to your preference)
+      -- local bg_active = '#2e3c64' -- Adjust to match your theme's active tab background
+
+      -- Color the "button" (the circle) Green on the Active Tab
+      -- vim.api.nvim_set_hl(0, 'BufferCurrentBtn', { fg = fg_green, bg = bg_active })
+      --
+      -- -- If you want the modified indicator to be green as well
+      -- vim.api.nvim_set_hl(0, 'BufferCurrentMod', { fg = fg_green, bg = bg_active })
+      --
+      -- -- Optional: If you want the file icon itself to be green on the active tab
+      -- vim.api.nvim_set_hl(0, 'BufferCurrentIcon', { fg = fg_green, bg = bg_active })
+    end,
+  },
+  {
+    'Wansmer/symbol-usage.nvim',
+    event = 'LspAttach',
+    config = function()
+      require('symbol-usage').setup {
+        references = { enabled = true, include_declaration = false },
+        definition = { enabled = false },
+        implementation = { enabled = false },
+        text_format = function(symbol)
+          if symbol.references then
+            return '󰌹 ' .. symbol.references
+          end
+          return ''
+        end,
+      }
+    end,
+  },
+
+  {
+    'ray-x/lsp_signature.nvim',
+    event = 'VeryLazy',
+    config = function()
+      require('lsp_signature').setup {
+        bind = true,
+        handler_opts = { border = 'rounded' },
+      }
+    end,
+  },
+
+  {
+    'zbirenbaum/copilot.lua',
+    cmd = 'Copilot',
+    event = 'InsertEnter',
+    config = function()
+      require('copilot').setup {
+        suggestion = {
+          enabled = true,
+          auto_trigger = true,
+          keymap = {
+            accept = '<M-l>', -- Alt+l to accept (prevents clashes with nvim-cmp)
+            next = '<M-]>',
+            prev = '<M-[>',
+          },
+        },
+        panel = { enabled = false },
+      }
+    end,
+  },
+
+  {
+    'kdheepak/lazygit.nvim',
+    cmd = {
+      'LazyGit',
+      'LazyGitConfig',
+      'LazyGitCurrentFile',
+      'LazyGitFilter',
+      'LazyGitFilterCurrentFile',
+    },
     dependencies = {
       'nvim-lua/plenary.nvim',
-      'neovim/nvim-lspconfig',
     },
+    keys = {
+      { '<leader>gg', '<cmd>LazyGit<cr>', desc = 'LazyGit' },
+      { '<leader>gf', '<cmd>LazyGitCurrentFile<cr>', desc = 'LazyGit (Current File)' },
+      { '<leader>gc', '<cmd>LazyGitFilter<cr>', desc = 'LazyGit (Commits)' },
+    },
+  },
+  {
+    'stevearc/aerial.nvim',
+    event = 'VeryLazy',
     opts = {
-      handlers = {
-        ['textDocument/publishDiagnostics'] = function(err, result, ctx, config)
-          if result.diagnostics then
-            -- TypeScript Error Codes to ignore:
-            local ignored_codes = {
-              [6133] = true, -- 'x' is declared but never read
-              [6192] = true, -- All imports in import declaration are unused
-              [6196] = true, -- 'x' is declared but never used
-              [6198] = true, -- All destructured elements are unused
-            }
+      backends = { 'lsp', 'treesitter', 'markdown', 'man' },
 
-            local new_diagnostics = {}
-            for _, diagnostic in ipairs(result.diagnostics) do
-              if not ignored_codes[diagnostic.code] then
-                table.insert(new_diagnostics, diagnostic)
-              end
-            end
-            result.diagnostics = new_diagnostics
-          end
+      layout = {
+        resize_to_content = false,
+        -- Places the window on the right (matching your screenshot)
+        default_direction = 'left',
 
-          -- Pass the filtered diagnostics to the default handler
-          vim.lsp.diagnostic.on_publish_diagnostics(err, result, ctx, config)
-        end,
+        -- a bit wider than default to fit long Java Class names
+        max_width = { 40, 0.2 },
+        min_width = 20,
+
+        -- When you jump to a symbol, flash the line so you see where you landed
+        preserve_equality = true,
       },
-      on_attach = function(_, bufnr)
-        local map = vim.keymap.set
-        local opts = { buffer = bufnr, silent = true }
 
-        -- Imports
-        map('n', '<leader>oi', '<cmd>TSToolsOrganizeImports<CR>', opts)
-        map('n', '<leader>os', '<cmd>TSToolsSortImports<CR>', opts)
-        map('n', '<leader>ru', '<cmd>TSToolsRemoveUnused<CR>', opts)
-        map('n', '<leader>ri', '<cmd>TSToolsRemoveUnusedImports<CR>', opts)
-        map('n', '<leader>am', '<cmd>TSToolsAddMissingImports<CR>', opts)
+      -- ICONS & GUIDES:
+      -- Use the Nerd Font icons you already have
+      nerd_font = true,
+      show_guides = true,
 
-        -- Fixes & navigation
-        map('n', '<leader>fa', '<cmd>TSToolsFixAll<CR>', opts)
-        map('n', '<leader>gs', '<cmd>TSToolsGoToSourceDefinition<CR>', opts)
+      -- FILTERING (The most important part for you):
+      -- In your screenshot, you see 'if', 'else', 'repeat'.
+      -- This config filters those out so you only see Classes, Functions, and Variables.
+      -- This makes navigating large Spring Boot files much faster.
+      filter_kind = {
+        'Class',
+        'Constructor',
+        'Enum',
+        'Function',
+        'Interface',
+        'Module',
+        'Method',
+        'Struct',
+        'Variable', -- Include this if you want to see class fields
+      },
 
-        -- Standard LSP
-        map('n', '<leader>rn', vim.lsp.buf.rename, opts)
-      end,
+      -- NAVIGATION:
+      -- Keymaps specifically for inside the Aerial window
+      keymaps = {
+        ['?'] = 'actions.show_help',
+        ['<CR>'] = 'actions.jump', -- Jump to symbol
+        ['<2-LeftMouse>'] = 'actions.jump',
+        ['<C-v>'] = 'actions.jump_vsplit', -- Open symbol in vertical split
+        ['<C-s>'] = 'actions.jump_split', -- Open symbol in horizontal split
+        ['p'] = 'actions.scroll', -- Preview symbol code without moving
+      },
+
+      -- AUTOMATION:
+      -- Automatically close the aerial window after you select a symbol?
+      -- Set to 'true' if you want it to disappear after use.
+      close_on_select = false,
+    },
+    -- KEYBINDING:
+    -- AstroNvim usually maps this to '<leader>lS', but this adds a shorter one: '<leader>a'
+    keys = {
+      { '<leader>at', '<cmd>AerialToggle<cr>', desc = 'Toggle Aerial (Symbols)' },
+    },
+  },
+  { 'projekt0n/github-nvim-theme', name = 'github-theme' },
+  {
+    'sphamba/smear-cursor.nvim',
+
+    opts = {
+      -- Smear cursor when switching buffers or windows.
+      smear_between_buffers = true,
+
+      -- Smear cursor when moving within line or to neighbor lines.
+      -- Use `min_horizontal_distance_smear` and `min_vertical_distance_smear` for finer control
+      smear_between_neighbor_lines = true,
+
+      -- Draw the smear in buffer space instead of screen space when scrolling
+      scroll_buffer_space = true,
+
+      -- Set to `true` if your font supports legacy computing symbols (block unicode symbols).
+      -- Smears and particles will look a lot less blocky.
+      legacy_computing_symbols_support = false,
+
+      -- Smear cursor in insert mode.
+      -- See also `vertical_bar_cursor_insert_mode` and `distance_stop_animating_vertical_bar`.
+      smear_insert_mode = true,
+      cursor_color = '#d3cdc3',
+    },
+  },
+  {
+    'folke/trouble.nvim',
+    opts = {}, -- for default options, refer to the configuration section for custom setup.
+    cmd = 'Trouble',
+    keys = {
+      {
+        '<leader>aa',
+        '<cmd>Trouble diagnostics toggle<cr>',
+        desc = 'Diagnostics (Trouble)',
+      },
+      {
+        '<leader>an',
+        '<cmd>Trouble diagnostics toggle filter.buf=0<cr>',
+        desc = 'Buffer Diagnostics (Trouble)',
+      },
+      -- {
+      --   '<leader>cs',
+      --   '<cmd>Trouble symbols toggle focus=false<cr>',
+      --   desc = 'Symbols (Trouble)',
+      -- },
+      -- {
+      --   '<leader>cl',
+      --   '<cmd>Trouble lsp toggle focus=false win.position=right<cr>',
+      --   desc = 'LSP Definitions / references / ... (Trouble)',
+      -- },
+      {
+        '<leader>tl',
+        '<cmd>Trouble loclist toggle<cr>',
+        desc = 'Location List (Trouble)',
+      },
+      {
+        '<leader>ql',
+        '<cmd>Trouble qflist toggle<cr>',
+        desc = 'Quickfix List (Trouble)',
+      },
     },
   },
 
