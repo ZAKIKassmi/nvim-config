@@ -1,14 +1,19 @@
 return {
-
-  -- The Editor Helper
+  -- Gitsigns
   {
     'lewis6991/gitsigns.nvim',
-    event = 'BufReadPre', -- Load immediately when reading a file
+    event = 'BufReadPre',
     config = function()
       require('gitsigns').setup {
-        current_line_blame = true, -- Ghost text showing who wrote the line
+        signs = {
+          add = { text = '│' },
+          change = { text = '│' },
+          delete = { text = '_' },
+          topdelete = { text = '‾' },
+          changedelete = { text = '~' },
+        },
+        current_line_blame = true,
         current_line_blame_opts = { delay = 500 },
-
         on_attach = function(bufnr)
           local gs = package.loaded.gitsigns
 
@@ -30,5 +35,25 @@ return {
         end,
       }
     end,
+  },
+
+  -- LazyGit
+  {
+    'kdheepak/lazygit.nvim',
+    cmd = {
+      'LazyGit',
+      'LazyGitConfig',
+      'LazyGitCurrentFile',
+      'LazyGitFilter',
+      'LazyGitFilterCurrentFile',
+    },
+    dependencies = {
+      'nvim-lua/plenary.nvim',
+    },
+    keys = {
+      { '<leader>gg', '<cmd>LazyGit<cr>', desc = 'LazyGit' },
+      { '<leader>gf', '<cmd>LazyGitCurrentFile<cr>', desc = 'LazyGit (Current File)' },
+      { '<leader>gc', '<cmd>LazyGitFilter<cr>', desc = 'LazyGit (Commits)' },
+    },
   },
 }
